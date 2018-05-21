@@ -11,8 +11,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-var isJSON bool
-
 type data map[string]interface{}
 type secret struct {
 	Data map[string]string `json:"data" yaml:"data"`
@@ -27,22 +25,24 @@ func main() {
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
 		fmt.Fprintln(os.Stderr, "The command is intended to work with pipes.")
 		fmt.Fprintln(os.Stderr, "Usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
-		fmt.Fprintln(os.Stderr, "Usage:", os.Args[0], "< secret.<yml|json>")
+		fmt.Fprintln(os.Stderr, "Usage:", os.Args[0], "< secret.<yaml|json>")
 		os.Exit(1)
 	}
 
 	output, err := parse(os.Stdin)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not decode the incoming secret: %v\n", err)
+		fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Fprint(os.Stdout, output)
 }
 
 func parse(rd io.Reader) (string, error) {
-	output := read(os.Stdin)
 	var s secret
-	if err := unmarshal(output, &s); err != nil {
+	output := read(rd)
+	isJSON := isJSONString(output)
+
+	if err := unmarshal(output, &s, isJSON); err != nil {
 		return "", err
 	}
 	if len(s.Data) <= 0 {
@@ -53,11 +53,16 @@ func parse(rd io.Reader) (string, error) {
 	}
 
 	var d data
-	if err := unmarshal(output, &d); err != nil {
+	if err := unmarshal(output, &d, isJSON); err != nil {
 		return "", err
 	}
 	d["data"] = s.Data
-	return string(marshal(d)), nil
+
+	b, err := marshal(d, isJSON)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func read(rd io.Reader) []byte {
@@ -73,27 +78,18 @@ func read(rd io.Reader) []byte {
 	return output
 }
 
-func unmarshal(in []byte, to interface{}) error {
-	err := json.Unmarshal(in, &to)
-	isJSON = err == nil
-
-	if err != nil {
-		return err
+func unmarshal(in []byte, out interface{}, asJSON bool) error {
+	if asJSON {
+		return json.Unmarshal(in, out)
 	}
-	if err = yaml.Unmarshal(in, &to); err != nil {
-		return err
-	}
-	return nil
+	return yaml.Unmarshal(in, out)
 }
 
-func marshal(d interface{}) []byte {
-	var s []byte
-	if isJSON {
-		s, _ = json.MarshalIndent(d, "", "  ")
-	} else {
-		s, _ = yaml.Marshal(d)
+func marshal(d interface{}, asJSON bool) ([]byte, error) {
+	if asJSON {
+		return json.MarshalIndent(d, "", "    ")
 	}
-	return s
+	return yaml.Marshal(d)
 }
 
 func decode(s *secret) error {
@@ -105,4 +101,9 @@ func decode(s *secret) error {
 		s.Data[key] = string(decoded)
 	}
 	return nil
+}
+
+func isJSONString(s []byte) bool {
+	var raw json.RawMessage
+	return json.Unmarshal(s, &raw) == nil
 }
