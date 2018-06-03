@@ -3,6 +3,12 @@
 `ksd` it is a useful tool to decode kubernetes secrets, thought to work with pipes.
 `ksd` supports `yaml` and `json` files.
 
+## Installation
+
+```bash
+$ go get github.com/mfuentesg/ksd
+```
+
 ## Usage
 
 ```
