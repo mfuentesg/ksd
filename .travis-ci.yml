@@ -1,0 +1,24 @@
+sudo: false
+
+language: go
+
+go:
+  - 1.9.x
+  - 1.x
+
+git:
+  depth: 1
+
+install: true
+
+before_script:
+  - go get -u github.com/mgechev/revive
+  - go get -u github.com/axw/gocov/gocov
+  - dep ensure
+
+script:
+  - revive -exclude ./vendor/... ./...
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - gocov test | gocov report

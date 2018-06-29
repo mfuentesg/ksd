@@ -1,5 +1,10 @@
 # Kubernetes secret decoder a.k.a `ksd`
 
+
+![Travis](https://img.shields.io/travis/mfuentesg/ksd.svg)
+[![Build Status](https://travis-ci.org/mfuentesg/ksd.png?branch=master)](https://travis-ci.org/mfuentesg/ksd)
+
+
 `ksd` it is a useful tool to decode kubernetes secrets, thought to work with pipes.
 `ksd` supports `yaml` and `json` files.
 
