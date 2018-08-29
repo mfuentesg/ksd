@@ -14,7 +14,8 @@ install: true
 before_script:
   - go get -u github.com/golang/dep/cmd/dep
   - go get -u github.com/mgechev/revive
-  - go get -u github.com/axw/gocov/gocov
+  - go get golang.org/x/tools/cover
+  - go get golang.org/x/tools/cmd/cover
   - dep ensure
 
 script:
@@ -22,4 +23,4 @@ script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
-  - gocov test | gocov report
+  - bash <(curl -s "https://codecov.io/bash")
