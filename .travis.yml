@@ -1,26 +1,23 @@
-sudo: false
-
 language: go
 
+sudo: false
+dist: trusty
+
 go:
-  - 1.9.x
-  - 1.x
+- 1.x
+- 1.7.x
+- 1.8.x
+- 1.9.x
+- master
 
-git:
-  depth: 1
-
-install: true
-
-before_script:
-  - go get -u github.com/golang/dep/cmd/dep
-  - go get -u github.com/mgechev/revive
-  - go get golang.org/x/tools/cover
-  - go get golang.org/x/tools/cmd/cover
-  - dep ensure
+before_install:
+- find "${GOPATH%%:*}" -name '*.a' -delete
+- rm -rf "${GOPATH%%:*}/src/golang.org"
+- go get golang.org/x/tools/cover
+- go get golang.org/x/tools/cmd/cover
 
 script:
-  - revive -exclude ./vendor/... ./...
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
+- go test -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
-  - bash <(curl -s "https://codecov.io/bash")
+- bash <(curl -s "https://codecov.io/bash")
