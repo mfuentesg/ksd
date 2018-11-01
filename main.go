@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type data map[string]interface{}
@@ -23,9 +23,9 @@ func main() {
 	}
 
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
-		fmt.Fprintln(os.Stderr, "The command is intended to work with pipes.")
-		fmt.Fprintln(os.Stderr, "Usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
-		fmt.Fprintln(os.Stderr, "Usage:", os.Args[0], "< secret.<yaml|json>")
+		fmt.Fprintln(os.Stderr, "the command is intended to work with pipes.")
+		fmt.Fprintln(os.Stderr, "usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
+		fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "< secret.<yaml|json>")
 		os.Exit(1)
 	}
 
