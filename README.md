@@ -4,8 +4,7 @@
 ![Travis](https://img.shields.io/travis/mfuentesg/ksd.svg)
 [![codecov](https://codecov.io/gh/mfuentesg/ksd/branch/master/graph/badge.svg)](https://codecov.io/gh/mfuentesg/ksd)
 
-`ksd` it is a useful tool to decode kubernetes secrets, thought to work with pipes.
-`ksd` supports `yaml` and `json` files.
+`ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs.
 
 ## Installation
 
