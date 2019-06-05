@@ -34,35 +34,31 @@ func main() {
 		fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Fprint(os.Stdout, output)
+	fmt.Fprint(os.Stdout, string(output))
 }
 
-func parse(rd io.Reader) (string, error) {
+func parse(rd io.Reader) ([]byte, error) {
 	var s secret
 	output := read(rd)
 	isJSON := isJSONString(output)
 
 	if err := unmarshal(output, &s, isJSON); err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(s.Data) <= 0 {
-		return string(output), nil
+		return output, nil
 	}
 	if err := decode(&s); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var d data
 	if err := unmarshal(output, &d, isJSON); err != nil {
-		return "", err
+		return nil, err
 	}
 	d["data"] = s.Data
 
-	b, err := marshal(d, isJSON)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
+	return marshal(d, isJSON)
 }
 
 func read(rd io.Reader) []byte {
