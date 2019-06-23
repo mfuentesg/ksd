@@ -16,6 +16,11 @@ type secret struct {
 	Data map[string]string `json:"data" yaml:"data"`
 }
 
+type decodedSecret struct {
+	Key string
+	Value string
+}
+
 func main() {
 	info, err := os.Stdin.Stat()
 	if err != nil {
@@ -29,7 +34,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	output, err := parse(os.Stdin)
+	stdin := read(os.Stdin)
+	output, err := parse(stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
 		os.Exit(1)
@@ -37,23 +43,21 @@ func main() {
 	fmt.Fprint(os.Stdout, string(output))
 }
 
-func parse(rd io.Reader) ([]byte, error) {
+func parse(in []byte) ([]byte, error) {
 	var s secret
-	output := read(rd)
-	isJSON := isJSONString(output)
+	isJSON := isJSONString(in)
 
-	if err := unmarshal(output, &s, isJSON); err != nil {
+	if err := unmarshal(in, &s, isJSON); err != nil {
 		return nil, err
 	}
-	if len(s.Data) <= 0 {
-		return output, nil
+	if len(s.Data) == 0 {
+		return in, nil
 	}
-	if err := decode(&s); err != nil {
-		return nil, err
-	}
+
+	s.Decode()
 
 	var d data
-	if err := unmarshal(output, &d, isJSON); err != nil {
+	if err := unmarshal(in, &d, isJSON); err != nil {
 		return nil, err
 	}
 	d["data"] = s.Data
@@ -88,18 +92,32 @@ func marshal(d interface{}, asJSON bool) ([]byte, error) {
 	return yaml.Marshal(d)
 }
 
-func decode(s *secret) error {
-	for key, encoded := range s.Data {
-		decoded, err := base64.StdEncoding.DecodeString(encoded)
-		if err != nil {
-			return err
+func decodeData(data map[string]string, channel chan decodedSecret) {
+	var value string
+	for key, encoded := range data {
+		// avoid wrong encoded secrets
+		if decoded, err := base64.StdEncoding.DecodeString(encoded); err ==  nil {
+			value = string(decoded)
+		} else {
+			value = encoded
 		}
-		s.Data[key] = string(decoded)
+
+		channel <- decodedSecret{
+			Key: key,
+			Value: value,
+		}
 	}
-	return nil
+	close(channel)
+}
+
+func (s *secret) Decode() {
+	channel := make(chan decodedSecret, len(s.Data))
+	go decodeData(s.Data, channel)
+	for secret := range channel {
+		s.Data[secret.Key] = secret.Value
+	}
 }
 
 func isJSONString(s []byte) bool {
-	var raw json.RawMessage
-	return json.Unmarshal(s, &raw) == nil
+	return json.Unmarshal(s, &json.RawMessage{}) == nil
 }

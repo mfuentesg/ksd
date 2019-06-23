@@ -29,6 +29,27 @@ func TestRead(t *testing.T) {
 	}
 }
 
+func BenchmarkRead(b *testing.B) {
+	texts := [...]string{
+		"this is a plain text",
+		`{"this": "is", "a": "text",\n"with": "multiple", "line": "s"}`,
+		`version:"2"\ndata:\n\tplain: "yml"`,
+		"",
+		"text",
+		"\t",
+		"\n",
+		"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+		"0",
+		"0x00000",
+	}
+	for _, text := range texts {
+		reader := strings.NewReader(text)
+		for n := 0; n < b.N; n++ {
+			read(reader)
+		}
+	}
+}
+
 func TestMarshal(t *testing.T) {
 	test := map[string]string{
 		"password": "c2VjcmV0",
@@ -54,7 +75,16 @@ func TestMarshal(t *testing.T) {
 	if byt, _ := marshal(testYml, false); expected != string(byt) {
 		t.Errorf("wrong marshal: expected \n%s\n got \n%s\n", expected, string(byt))
 	}
+}
 
+func BenchmarkMarshal(b *testing.B) {
+	test := map[string]string{
+		"password": "c2VjcmV0",
+		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
+	}
+	for n := 0; n < b.N; n++ {
+		marshal(test, true)
+	}
 }
 
 func TestUnmarshalJSON(t *testing.T) {
@@ -78,6 +108,14 @@ func TestUnmarshalJSON(t *testing.T) {
 	}
 	if !reflect.DeepEqual(expected, j) {
 		t.Errorf("json struct does not match.\nexpected\n%v\ngot\n%v", expected, j)
+	}
+}
+
+func BenchmarkUnmarshalJSON(b *testing.B) {
+	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	var j map[string]interface{}
+	for n := 0; n < b.N; n++ {
+		unmarshal(jsonCase, &j, true)
 	}
 }
 
@@ -105,28 +143,28 @@ func TestUnmarshalYaml(t *testing.T) {
 	}
 }
 
-func TestDecode(t *testing.T) {
-	s := &secret{}
-	if err := decode(s); err != nil {
-		t.Errorf("wrong decode: %v got %v", err, s)
+func BenchmarkUnmarshalYaml(b *testing.B) {
+	var y map[string]interface{}
+	yamlCase, _ := ioutil.ReadFile("./mock.yml")
+	for n := 0; n < b.N; n++ {
+		unmarshal(yamlCase, &y, false)
 	}
-	s = &secret{
+}
+
+func TestSecret_Decode(t *testing.T) {
+	s := &secret{
 		Data: map[string]string{
 			"password": "c2VjcmV",
 		},
 	}
-	if err := decode(s); err == nil {
-		t.Errorf("expected `illegal base64 data` got %v", s)
-	}
+	s.Decode()
 	s = &secret{
 		Data: map[string]string{
 			"password": "c2VjcmV0",
 			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 		},
 	}
-	if err := decode(s); err != nil {
-		t.Errorf("wrong decode: %v got %v", err, s)
-	}
+	s.Decode()
 	expected := &secret{
 		Data: map[string]string{
 			"password": "secret",
@@ -135,6 +173,19 @@ func TestDecode(t *testing.T) {
 	}
 	if !reflect.DeepEqual(expected, s) {
 		t.Errorf("wrong decode expected %v got %v", expected, s)
+	}
+}
+
+func BenchmarkSecret_Decode(b *testing.B) {
+	s := &secret{
+		Data: map[string]string{
+			"password": "c2VjcmV0",
+			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
+		},
+	}
+
+	for n := 0; n < b.N; n++ {
+		s.Decode()
 	}
 }
 
@@ -167,20 +218,39 @@ func TestIsJSONString(t *testing.T) {
 	}
 }
 
+func BenchmarkIsJSONString(b *testing.B) {
+	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	successCases := [...][]byte{
+		[]byte("null"),
+		[]byte(`{"valid":"json"}`),
+		[]byte(`{"nested": {"json": "string"}}`),
+		jsonCase,
+	}
+	for n := 0; n < b.N; n++ {
+		for _, test := range successCases {
+			isJSONString(test)
+		}
+	}
+}
+
 func TestParse(t *testing.T) {
-	if s, e := parse(strings.NewReader(`{"a"`)); e == nil {
+	if s, e := parse([]byte(`{"a"`)); e == nil {
 		t.Errorf("expected invalid parse got %v", s)
 	}
 
 	// Return same string without data part
 	expected := `{\n    "key": "value"\n}`
-	if s, e := parse(strings.NewReader(`{"key": "value"}`)); e != nil {
+	if s, e := parse([]byte(`{"key": "value"}`)); e != nil {
 		t.Errorf("expected %v got %v", expected, s)
 	}
-	if s, e := parse(strings.NewReader(`{ "data": { "password": "c2VjcmV" } }`)); e == nil {
-		t.Errorf("expected illegal base64 data got %v", s)
-	}
-	if s, e := parse(strings.NewReader(`{"data": {"password": "c2VjcmV0"}}`)); e != nil {
+	if s, e := parse([]byte(`{"data": {"password": "c2VjcmV0"}}`)); e != nil {
 		t.Errorf("wrong parse got %v", s)
+	}
+}
+
+func BenchmarkParse(b *testing.B) {
+	reader := []byte(`{"data": {"password": "c2VjcmV0"}}`)
+	for n := 0; n < b.N; n++ {
+		parse(reader)
 	}
 }
