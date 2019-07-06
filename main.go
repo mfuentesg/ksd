@@ -11,10 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type data map[string]interface{}
-type secret struct {
-	Data map[string]string `json:"data" yaml:"data"`
-}
+type secret map[string]interface{}
 
 type decodedSecret struct {
 	Key   string
@@ -44,25 +41,19 @@ func main() {
 }
 
 func parse(in []byte) ([]byte, error) {
-	var s secret
 	isJSON := isJSONString(in)
 
+	var s secret
 	if err := unmarshal(in, &s, isJSON); err != nil {
 		return nil, err
 	}
-	if len(s.Data) == 0 {
+
+	data, ok := s["data"].(map[string]string)
+	if !ok || len(data) == 0 {
 		return in, nil
 	}
-
-	s.Decode()
-
-	var d data
-	if err := unmarshal(in, &d, isJSON); err != nil {
-		return nil, err
-	}
-	d["data"] = s.Data
-
-	return marshal(d, isJSON)
+	s["data"] = decode(data)
+	return marshal(s, isJSON)
 }
 
 func read(rd io.Reader) []byte {
@@ -103,16 +94,18 @@ func decodeSecret(key, secret string, secrets chan decodedSecret) {
 	secrets <- decodedSecret{Key: key, Value: value}
 }
 
-func (s *secret) Decode() {
-	secrets := make(chan decodedSecret, len(s.Data))
-	for key, encoded := range s.Data {
+func decode(data map[string]string) map[string]string {
+	length := len(data)
+	secrets := make(chan decodedSecret, length)
+	decoded := make(map[string]string, length)
+	for key, encoded := range data {
 		go decodeSecret(key, encoded, secrets)
 	}
-
-	for i := 0; i < len(s.Data); i++ {
+	for i := 0; i < length; i++ {
 		secret := <-secrets
-		s.Data[secret.Key] = secret.Value
+		decoded[secret.Key] = secret.Value
 	}
+	return decoded
 }
 
 func isJSONString(s []byte) bool {
