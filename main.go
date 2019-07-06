@@ -17,7 +17,7 @@ type secret struct {
 }
 
 type decodedSecret struct {
-	Key string
+	Key   string
 	Value string
 }
 
@@ -92,28 +92,25 @@ func marshal(d interface{}, asJSON bool) ([]byte, error) {
 	return yaml.Marshal(d)
 }
 
-func decodeData(data map[string]string, channel chan decodedSecret) {
+func decodeSecret(key, secret string, secrets chan decodedSecret) {
 	var value string
-	for key, encoded := range data {
-		// avoid wrong encoded secrets
-		if decoded, err := base64.StdEncoding.DecodeString(encoded); err ==  nil {
-			value = string(decoded)
-		} else {
-			value = encoded
-		}
-
-		channel <- decodedSecret{
-			Key: key,
-			Value: value,
-		}
+	// avoid wrong encoded secrets
+	if decoded, err := base64.StdEncoding.DecodeString(secret); err == nil {
+		value = string(decoded)
+	} else {
+		value = secret
 	}
-	close(channel)
+	secrets <- decodedSecret{Key: key, Value: value}
 }
 
 func (s *secret) Decode() {
-	channel := make(chan decodedSecret, len(s.Data))
-	go decodeData(s.Data, channel)
-	for secret := range channel {
+	secrets := make(chan decodedSecret, len(s.Data))
+	for key, encoded := range s.Data {
+		go decodeSecret(key, encoded, secrets)
+	}
+
+	for i := 0; i < len(s.Data); i++ {
+		secret := <-secrets
 		s.Data[secret.Key] = secret.Value
 	}
 }
