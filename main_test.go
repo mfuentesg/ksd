@@ -152,40 +152,28 @@ func BenchmarkUnmarshalYaml(b *testing.B) {
 }
 
 func TestSecret_Decode(t *testing.T) {
-	s := &secret{
-		Data: map[string]string{
-			"password": "c2VjcmV",
-		},
+	data := map[string]string{
+		"password": "c2VjcmV0",
+		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
-	s.Decode()
-	s = &secret{
-		Data: map[string]string{
-			"password": "c2VjcmV0",
-			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-		},
+	result := decode(data)
+	expected := map[string]string{
+		"password": "secret",
+		"app":      "kubernetes secret decoder",
 	}
-	s.Decode()
-	expected := &secret{
-		Data: map[string]string{
-			"password": "secret",
-			"app":      "kubernetes secret decoder",
-		},
-	}
-	if !reflect.DeepEqual(expected, s) {
-		t.Errorf("wrong decode expected %v got %v", expected, s)
+	if !reflect.DeepEqual(expected, result) {
+		t.Errorf("wrong decode expected %v got %v", expected, result)
 	}
 }
 
 func BenchmarkSecret_Decode(b *testing.B) {
-	s := &secret{
-		Data: map[string]string{
-			"password": "c2VjcmV0",
-			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-		},
+	data := map[string]string{
+		"password": "c2VjcmV0",
+		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
 
 	for n := 0; n < b.N; n++ {
-		s.Decode()
+		decode(data)
 	}
 }
 
