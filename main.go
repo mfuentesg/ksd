@@ -48,7 +48,7 @@ func parse(in []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	data, ok := s["data"].(map[string]string)
+	data, ok := s["data"].(map[interface{}]interface{})
 	if !ok || len(data) == 0 {
 		return in, nil
 	}
@@ -94,12 +94,12 @@ func decodeSecret(key, secret string, secrets chan decodedSecret) {
 	secrets <- decodedSecret{Key: key, Value: value}
 }
 
-func decode(data map[string]string) map[string]string {
+func decode(data map[interface{}]interface{}) map[string]string {
 	length := len(data)
 	secrets := make(chan decodedSecret, length)
 	decoded := make(map[string]string, length)
 	for key, encoded := range data {
-		go decodeSecret(key, encoded, secrets)
+		go decodeSecret(key.(string), encoded.(string), secrets)
 	}
 	for i := 0; i < length; i++ {
 		secret := <-secrets
