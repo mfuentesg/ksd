@@ -40,6 +40,23 @@ func main() {
 	fmt.Fprint(os.Stdout, string(output))
 }
 
+func cast(data interface{}, isJSON bool) (map[string]interface{}, bool) {
+	if isJSON {
+		d, ok := data.(map[string]interface{})
+		return d, ok
+	}
+
+	parsed, ok := data.(map[interface{}]interface{})
+	if !ok {
+		return nil, false
+	}
+	d := make(map[string]interface{}, len(parsed))
+	for key, value := range parsed {
+		d[key.(string)] = value
+	}
+	return d, true
+}
+
 func parse(in []byte) ([]byte, error) {
 	isJSON := isJSONString(in)
 
@@ -48,7 +65,7 @@ func parse(in []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	data, ok := s["data"].(map[interface{}]interface{})
+	data, ok := cast(s["data"], isJSON)
 	if !ok || len(data) == 0 {
 		return in, nil
 	}
@@ -89,17 +106,18 @@ func decodeSecret(key, secret string, secrets chan decodedSecret) {
 	if decoded, err := base64.StdEncoding.DecodeString(secret); err == nil {
 		value = string(decoded)
 	} else {
+		fmt.Println("with error?", err)
 		value = secret
 	}
 	secrets <- decodedSecret{Key: key, Value: value}
 }
 
-func decode(data map[interface{}]interface{}) map[string]string {
+func decode(data map[string]interface{}) map[string]string {
 	length := len(data)
 	secrets := make(chan decodedSecret, length)
 	decoded := make(map[string]string, length)
 	for key, encoded := range data {
-		go decodeSecret(key.(string), encoded.(string), secrets)
+		go decodeSecret(key, encoded.(string), secrets)
 	}
 	for i := 0; i < length; i++ {
 		secret := <-secrets
