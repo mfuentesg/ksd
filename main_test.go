@@ -152,7 +152,7 @@ func BenchmarkUnmarshalYaml(b *testing.B) {
 }
 
 func TestSecret_Decode(t *testing.T) {
-	data := map[interface{}]interface{}{
+	data := map[string]interface{}{
 		"password": "c2VjcmV0",
 		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
@@ -167,7 +167,7 @@ func TestSecret_Decode(t *testing.T) {
 }
 
 func BenchmarkSecret_Decode(b *testing.B) {
-	data := map[interface{}]interface{}{
+	data := map[string]interface{}{
 		"password": "c2VjcmV0",
 		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
