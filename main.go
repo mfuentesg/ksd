@@ -18,6 +18,12 @@ type decodedSecret struct {
 	Value string
 }
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	info, err := os.Stdin.Stat()
 	if err != nil {
@@ -25,6 +31,7 @@ func main() {
 	}
 
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
+		fmt.Printf("ksd v%v, commit %v, built at %v", version, commit, date)
 		fmt.Fprintln(os.Stderr, "the command is intended to work with pipes.")
 		fmt.Fprintln(os.Stderr, "usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
 		fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "< secret.<yaml|json>")
