@@ -1,7 +1,6 @@
 name: Go
 on: [push, pull_request]
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -20,5 +19,19 @@ jobs:
       run: |
         go mod download
 
-    - name: Build
-      run: go build -v .
+    - name: Test
+      run: |
+        go test -race -coverprofile=coverage.txt -covermode=atomic
+
+    deploy:
+      name: Deploy
+      uses: goreleaser/goreleaser
+      secrets:
+        - "GITHUB_TOKEN"
+        - "GORELEASER_GITHUB_TOKEN"
+        # either GITHUB_TOKEN or GORELEASER_GITHUB_TOKEN is required
+        - "DOCKER_USERNAME"
+        - "DOCKER_PASSWORD"
+      args: "release"
+      needs:
+        - "is-tag"
