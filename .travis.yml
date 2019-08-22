@@ -6,7 +6,6 @@ go:
 env:
   global:
     - GO111MODULE=on
-    - VERSION=$(cat VERSION)
 
 before_install:
   - find "${GOPATH%%:*}" -name '*.a' -delete
@@ -27,15 +26,16 @@ after_success:
 
 before_deploy:
   - mkdir -p release
-  - GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o release/ksd-linux-amd64
-  - GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$VERSION" -o release/ksd-linux-386
-  - GOOS=linux GOARCH=arm go build -ldflags "-X main.version=$VERSION" -o release/ksd-linux-arm
-  - GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o release/ksd-darwin-amd64
+  - GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$TRAVIS_TAG" -o release/ksd-linux-amd64
+  - GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$TRAVIS_TAG" -o release/ksd-linux-386
+  - GOOS=linux GOARCH=arm go build -ldflags "-X main.version=$TRAVIS_TAG" -o release/ksd-linux-arm
+  - GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=$TRAVIS_TAG" -o release/ksd-darwin-amd64
 
 deploy:
   provider: releases
-  api_key:
-    secure: ferNN33vxqd0gc7oE1cL/vAHciBkmQOcg1BHqMVOxUBQwdze6mdZBN2oDi7FC/D/YjiBRQaoyPPL224E4HYmVQUV66BQZR4OoZtQKc08P6JTRZXtJGUjDZJya3Dua4nwHVe1Er/lSRGLmAhgKFNh+x/OZDwQIiugaWxGcmTzherYYzwm7IYmclG0nJU02LtPu9OcDCgOGQfRtc7eOoyPTda0wlDkFT0d0tAqfvjDteEp5i5U5vm9fghQL0m8zVwcuDWRnznwXBLLn36lhpxC/LwxbtB9bRiXpVOX66PxovTKI6gfvpjvOHCTcGJHDVBi2EokfOuwze1g+PN6/x+1xcyqS4STxHn7CnuWxYR6nIaEytEgvcFwVRoW0PgH3gG048LF5CEkvNBNzc0CpnQIp3W1u0Uz90MH/+Iwly3EqkZuKWDwsO/hCx4WwzKjCU2+8yjYziHXN5tUVMx5J3zhFnNu5/7KGrSte1rkaEQohJXbb3ffUNDg0HmR+pPi2y6jWHWBE+DCwOfuEAbr6DDlHIXw/u6O5BrVCftvXQyH5yylWugHIQy6xf04t4bxjj3xE7djblhYw4VafBGdd3hsWSGksbiyvC3dQTflA5sPL1jaUj52qM+owgeTTtVHebxpnoU9Vx3RtZ3rOQw2nBfP8V9fbhTB3yz1n6N9U4aCI4A=
+  github_token: $GITHUB_TOKEN
+  skip_cleanup: true
+  keep_history: true
   file:
   - release/ksd-linux-amd64
   - release/ksd-linux-386
