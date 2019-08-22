@@ -18,7 +18,13 @@ type decodedSecret struct {
 	Value string
 }
 
+var version string
+
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		fmt.Fprintf(os.Stdout, "ksd version v%s\n", version)
+		return
+	}
 	info, err := os.Stdin.Stat()
 	if err != nil {
 		panic(err)

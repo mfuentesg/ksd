@@ -83,7 +83,7 @@ func BenchmarkMarshal(b *testing.B) {
 		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
 	for n := 0; n < b.N; n++ {
-		marshal(test, true)
+		_, _ = marshal(test, true)
 	}
 }
 
@@ -115,7 +115,7 @@ func BenchmarkUnmarshalJSON(b *testing.B) {
 	jsonCase, _ := ioutil.ReadFile("./mock.json")
 	var j map[string]interface{}
 	for n := 0; n < b.N; n++ {
-		unmarshal(jsonCase, &j, true)
+		_ = unmarshal(jsonCase, &j, true)
 	}
 }
 
@@ -147,7 +147,7 @@ func BenchmarkUnmarshalYaml(b *testing.B) {
 	var y map[string]interface{}
 	yamlCase, _ := ioutil.ReadFile("./mock.yml")
 	for n := 0; n < b.N; n++ {
-		unmarshal(yamlCase, &y, false)
+		_ = unmarshal(yamlCase, &y, false)
 	}
 }
 
@@ -239,6 +239,6 @@ func TestParse(t *testing.T) {
 func BenchmarkParse(b *testing.B) {
 	reader := []byte(`{"data": {"password": "c2VjcmV0"}}`)
 	for n := 0; n < b.N; n++ {
-		parse(reader)
+		_, _ = parse(reader)
 	}
 }
