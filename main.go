@@ -75,7 +75,8 @@ func parse(in []byte) ([]byte, error) {
 	if !ok || len(data) == 0 {
 		return in, nil
 	}
-	s["data"] = decode(data)
+	s["stringData"] = decode(data)
+	delete(s, "data")
 	return marshal(s, isJSON)
 }
 
@@ -112,7 +113,6 @@ func decodeSecret(key, secret string, secrets chan decodedSecret) {
 	if decoded, err := base64.StdEncoding.DecodeString(secret); err == nil {
 		value = string(decoded)
 	} else {
-		fmt.Println("with error?", err)
 		value = secret
 	}
 	secrets <- decodedSecret{Key: key, Value: value}
