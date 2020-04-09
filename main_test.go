@@ -2,9 +2,10 @@ package main
 
 import (
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRead(t *testing.T) {
@@ -23,9 +24,7 @@ func TestRead(t *testing.T) {
 
 	for _, text := range texts {
 		reader := strings.NewReader(text)
-		if content := read(reader); string(content) != text {
-			t.Errorf("error reading, expected %s, got %s", text, string(content))
-		}
+		assert.Equal(t, text, string(read(reader)))
 	}
 }
 
@@ -48,6 +47,7 @@ func BenchmarkRead(b *testing.B) {
 			read(reader)
 		}
 	}
+	b.ReportAllocs()
 }
 
 func TestMarshal(t *testing.T) {
@@ -60,9 +60,8 @@ func TestMarshal(t *testing.T) {
 	}
 
 	expected := "{\n    \"app\": \"a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\",\n    \"password\": \"c2VjcmV0\"\n}"
-	if byt, _ := marshal(test, true); expected != string(byt) {
-		t.Errorf("wrong marshal: expected \n%s\n got \n%s\n", expected, string(byt))
-	}
+	byt, _ := marshal(test, true)
+	assert.Equal(t, expected, string(byt))
 
 	testYml := map[string]interface{}{
 		"data": map[string]string{
@@ -72,9 +71,8 @@ func TestMarshal(t *testing.T) {
 	}
 
 	expected = "data:\n  app: a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\n  password: c2VjcmV0\n"
-	if byt, _ := marshal(testYml, false); expected != string(byt) {
-		t.Errorf("wrong marshal: expected \n%s\n got \n%s\n", expected, string(byt))
-	}
+	byt, _ = marshal(testYml, false)
+	assert.Equal(t, expected, string(byt))
 }
 
 func BenchmarkMarshal(b *testing.B) {
@@ -82,6 +80,8 @@ func BenchmarkMarshal(b *testing.B) {
 		"password": "c2VjcmV0",
 		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
+	b.ReportAllocs()
+
 	for n := 0; n < b.N; n++ {
 		_, _ = marshal(test, true)
 	}
@@ -103,17 +103,18 @@ func TestUnmarshalJSON(t *testing.T) {
 		},
 		"type": "Opaque",
 	}
-	if err := unmarshal(jsonCase, &j, true); err != nil {
-		t.Errorf("must return a valid struct %v", err)
-	}
-	if !reflect.DeepEqual(expected, j) {
-		t.Errorf("json struct does not match.\nexpected\n%v\ngot\n%v", expected, j)
-	}
+
+	err := unmarshal(jsonCase, &j, true)
+	assert.Nil(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, j)
 }
 
 func BenchmarkUnmarshalJSON(b *testing.B) {
 	jsonCase, _ := ioutil.ReadFile("./mock.json")
 	var j map[string]interface{}
+	b.ReportAllocs()
+
 	for n := 0; n < b.N; n++ {
 		_ = unmarshal(jsonCase, &j, true)
 	}
@@ -135,17 +136,17 @@ func TestUnmarshalYaml(t *testing.T) {
 		},
 		"type": "Opaque",
 	}
-	if err := unmarshal(yamlCase, &y, false); err != nil {
-		t.Errorf("must return a valid struct %v", err)
-	}
-	if !reflect.DeepEqual(expected, y) {
-		t.Errorf("yaml struct does not match.\nexpected\n%v\ngot\n%v", expected, y)
-	}
+	err := unmarshal(yamlCase, &y, false)
+	assert.Nil(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, y)
 }
 
 func BenchmarkUnmarshalYaml(b *testing.B) {
 	var y map[string]interface{}
 	yamlCase, _ := ioutil.ReadFile("./mock.yml")
+	b.ReportAllocs()
+
 	for n := 0; n < b.N; n++ {
 		_ = unmarshal(yamlCase, &y, false)
 	}
@@ -161,9 +162,7 @@ func TestSecret_Decode(t *testing.T) {
 		"password": "secret",
 		"app":      "kubernetes secret decoder",
 	}
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("wrong decode expected %v got %v", expected, result)
-	}
+	assert.Equal(t, expected, result)
 }
 
 func BenchmarkSecret_Decode(b *testing.B) {
@@ -172,6 +171,7 @@ func BenchmarkSecret_Decode(b *testing.B) {
 		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 	}
 
+	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		decode(data)
 	}
@@ -200,9 +200,7 @@ func TestIsJSONString(t *testing.T) {
 		jsonCase,
 	}
 	for _, test := range successCases {
-		if !isJSONString(test) {
-			t.Errorf("%v must be a json string", string(test))
-		}
+		assert.True(t, isJSONString(test))
 	}
 }
 
@@ -214,6 +212,8 @@ func BenchmarkIsJSONString(b *testing.B) {
 		[]byte(`{"nested": {"json": "string"}}`),
 		jsonCase,
 	}
+
+	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for _, test := range successCases {
 			isJSONString(test)
@@ -222,22 +222,26 @@ func BenchmarkIsJSONString(b *testing.B) {
 }
 
 func TestParse(t *testing.T) {
-	if s, e := parse([]byte(`{"a"`)); e == nil {
-		t.Errorf("expected invalid parse got %v", s)
-	}
+	_, err := parse([]byte(`{"a"`))
+	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	// Return same string without data part
-	expected := `{\n    "key": "value"\n}`
-	if s, e := parse([]byte(`{"key": "value"}`)); e != nil {
-		t.Errorf("expected %v got %v", expected, s)
-	}
-	if s, e := parse([]byte(`{"data": {"password": "c2VjcmV0"}}`)); e != nil {
-		t.Errorf("wrong parse got %v", s)
-	}
+	expected := `{"key": "value"}`
+	s, err := parse([]byte(`{"key": "value"}`))
+	assert.Nil(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, string(s))
+
+	_, err = parse([]byte(`{"data": {"password": "c2VjcmV0"}}`))
+	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func BenchmarkParse(b *testing.B) {
 	reader := []byte(`{"data": {"password": "c2VjcmV0"}}`)
+	b.ReportAllocs()
+
 	for n := 0; n < b.N; n++ {
 		_, _ = parse(reader)
 	}
