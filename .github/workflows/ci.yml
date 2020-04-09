@@ -27,6 +27,7 @@ jobs:
         with:
           version: latest
           args: release --config=.goreleaser.yml --rm-dist
+          key: ${{ secrets.SIGN_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}

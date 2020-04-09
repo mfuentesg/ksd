@@ -8,8 +8,15 @@
 
 ## Installation
 
+### Go
 ```bash
 $ go get github.com/mfuentesg/ksd
+```
+
+### Brew
+
+```
+brew install mfuentesg/tap/ksd
 ```
 
 ## Usage
@@ -21,9 +28,8 @@ $ ksd < kubectl get secret <secret name> <secret file>.<yaml|json>
 
 ## Example
 
+> kube_secret.json
 ```json
-kube_secret.json
-
 {
     "apiVersion": "v1",
     "data": {
@@ -43,9 +49,8 @@ kube_secret.json
 $ ksd < kube_secret.json
 ```
 
+> output
 ```json
-output
-
 {
     "apiVersion": "v1",
     "data": {
