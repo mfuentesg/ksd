@@ -34,8 +34,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v1
         with:
           version: ${{ matrix.version }}
-          args: release --rm-dist
-          key: ${{ secrets.SECRET_KEY }}
+          args: release --config=.goreleaser.yml --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
