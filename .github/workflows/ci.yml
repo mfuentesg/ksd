@@ -7,17 +7,9 @@ on:
 
 jobs:
   ci:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-        version:
-          - latest
-          - v0.117.0
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -33,7 +25,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: ${{ matrix.version }}
+          version: latest
           args: release --config=.goreleaser.yml --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
