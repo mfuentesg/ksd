@@ -28,3 +28,65 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+  -
+    # Name template of the recipe
+    # Default to project name
+    name: ksd
+
+    # GOARM to specify which 32-bit arm version to use if there are multiple versions
+    # from the build section. Brew formulas support atm only one 32-bit version.
+    # Default is 6 for all artifacts or each id if there a multiple versions.
+    goarm: 6
+
+
+    # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
+    # same kind. We will probably unify this in the next major version like it is done with scoop.
+
+    # Github repository to push the tap to.
+    github:
+      owner: mfuentesg
+      name: homebrew-tools
+
+    # Allows you to set a custom download strategy. Note that you'll need
+    # to implement the strategy and add it to your tap repository.
+    # Example: https://docs.brew.sh/Formula-Cookbook#specifying-the-download-strategy-explicitly
+    # Default is empty.
+    download_strategy: CurlDownloadStrategy.
+
+    # Allows you to add a custom require_relative at the top of the formula template
+    # Default is empty
+    custom_require: custom_download_strategy
+
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: mfuentesg
+      email: marceloe.fuentes@gmai.com
+
+    folder: formulas
+
+    # Caveats for the user of your binary.
+    # Default is empty.
+    caveats: "ksd < kubectl get secret <secret name> <secret file>.<yaml|json>"
+
+    # Your app's homepage.
+    # Default is empty.
+    homepage: "https://github.com/mfuentesg/ksd"
+
+    # Your app's description.
+    # Default is empty.
+    description: "ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs."
+
+    # Setting this will prevent goreleaser to actually try to commit the updated
+    # formula - instead, the formula file will be stored on the dist folder only,
+    # leaving the responsibility of publishing it to the user.
+    # If set to auto, the release will not be uploaded to the homebrew tap
+    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
+    # Default is false.
+    skip_upload: true
+
+    # So you can `brew test` your formula.
+    # Default is empty.
+    test: |
+      expr "ksd version v1.0.a" : ".* v[0-9].[0-9].[0-9]" >/dev/null
