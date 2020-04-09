@@ -27,11 +27,6 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.x
-      - name: Check
-        uses: ./
-        with:
-          version: ${{ matrix.version }}
-          args: check --debug
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
