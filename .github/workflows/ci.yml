@@ -27,9 +27,15 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.x
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
           version: ${{ matrix.version }}
           args: release --rm-dist
-          key: ${{ secrets.GITHUB_TOKEN }}
+          key: ${{ secrets.SECRET_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
