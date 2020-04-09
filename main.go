@@ -22,7 +22,7 @@ var version string
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Fprintf(os.Stdout, "ksd version %s\n", version)
+		_, _ = fmt.Fprintf(os.Stdout, "ksd version %s\n", version)
 		return
 	}
 	info, err := os.Stdin.Stat()
@@ -31,19 +31,19 @@ func main() {
 	}
 
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
-		fmt.Fprintln(os.Stderr, "the command is intended to work with pipes.")
-		fmt.Fprintln(os.Stderr, "usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
-		fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "< secret.<yaml|json>")
+		_, _ = fmt.Fprintln(os.Stderr, "the command is intended to work with pipes.")
+		_, _ = fmt.Fprintln(os.Stderr, "usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
+		_, _ = fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "< secret.<yaml|json>")
 		os.Exit(1)
 	}
 
 	stdin := read(os.Stdin)
 	output, err := parse(stdin)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Fprint(os.Stdout, string(output))
+	_, _ = fmt.Fprint(os.Stdout, string(output))
 }
 
 func cast(data interface{}, isJSON bool) (map[string]interface{}, bool) {
