@@ -50,7 +50,7 @@ brews:
     # to implement the strategy and add it to your tap repository.
     # Example: https://docs.brew.sh/Formula-Cookbook#specifying-the-download-strategy-explicitly
     # Default is empty.
-    download_strategy: CurlDownloadStrategy.
+    download_strategy: :curl
 
     # Allows you to add a custom require_relative at the top of the formula template
     # Default is empty
@@ -60,7 +60,7 @@ brews:
     # Defaults are shown.
     commit_author:
       name: mfuentesg
-      email: marceloe.fuentes@gmai.com
+      email: marceloe.fuentes@gmail.com
 
     # Caveats for the user of your binary.
     # Default is empty.
