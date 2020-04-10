@@ -1,111 +1,32 @@
-on: release
-name: Build
+name: ci
+
+on:
+  push:
+    tags:
+      - 'v*'
+
 jobs:
-  release-linux-386:
-    name: release linux/386
+  ci:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     steps:
-      - name: Query version number
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.x
+      - name: Get the version
         id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: latest
+          args: release --config=.goreleaser.yml --rm-dist
         env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: "386"
-          GOOS: linux
-  release-linux-amd64:
-    name: release linux/amd64
-    runs-on: ubuntu-latest
-    steps:
-      - name: Query version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
-        env:
           VERSION: ${{ steps.get_version.outputs.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: amd64
-          GOOS: linux
-  release-darwin-386:
-    name: release darwin/386
-    runs-on: ubuntu-latest
-    steps:
-      - name: Query version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
-        env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: "386"
-          GOOS: darwin
-  release-darwin-amd64:
-    name: release darwin/amd64
-    runs-on: ubuntu-latest
-    steps:
-      - name: Query version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
-        env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: amd64
-          GOOS: darwin
-  release-windows-386:
-    name: release windows/386
-    runs-on: ubuntu-latest
-    steps:
-      - name: Query version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
-        env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: "386"
-          GOOS: windows
-  release-windows-amd64:
-    name: release windows/amd64
-    runs-on: ubuntu-latest
-    steps:
-      - name: Query version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using version tag ${GITHUB_REF:10}"
-          echo ::set-output name=version::"${GITHUB_REF:10}"
-      - uses: actions/checkout@master
-      - name: compile and release
-        uses: ngs/go-release.action@v1.0.1
-        env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          GOARCH: amd64
-          GOOS: windows
