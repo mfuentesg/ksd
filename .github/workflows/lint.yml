@@ -3,12 +3,14 @@ on: [push, pull_request]
 jobs:
   run:
     runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Set up Go ${{ matrix.go-version}}
         uses: actions/setup-go@v1
         with:
           go-version: 1.14
-          os: [ubuntu-latest, macos-latest]
         id: go
 
       - name: Check out code into the Go module directory
