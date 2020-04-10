@@ -62,8 +62,6 @@ brews:
       name: mfuentesg
       email: marceloe.fuentes@gmai.com
 
-    folder: formulas
-
     # Caveats for the user of your binary.
     # Default is empty.
     caveats: "ksd < kubectl get secret <secret name> <secret file>.<yaml|json>"
