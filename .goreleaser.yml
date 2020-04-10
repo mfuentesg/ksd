@@ -44,17 +44,7 @@ brews:
     # Github repository to push the tap to.
     github:
       owner: mfuentesg
-      name: homebrew-tools
-
-    # Allows you to set a custom download strategy. Note that you'll need
-    # to implement the strategy and add it to your tap repository.
-    # Example: https://docs.brew.sh/Formula-Cookbook#specifying-the-download-strategy-explicitly
-    # Default is empty.
-    download_strategy: :curl
-
-    # Allows you to add a custom require_relative at the top of the formula template
-    # Default is empty
-    custom_require: custom_download_strategy
+      name: homebrew-tap
 
     # Git author used to commit to the repository.
     # Defaults are shown.
