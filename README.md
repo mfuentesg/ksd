@@ -4,6 +4,13 @@
 ![Travis](https://img.shields.io/travis/mfuentesg/ksd.svg)
 [![codecov](https://codecov.io/gh/mfuentesg/ksd/branch/master/graph/badge.svg)](https://codecov.io/gh/mfuentesg/ksd)
 
+<a href="https://www.buymeacoffee.com/mfuentesg" target="_blank">
+   <img height="41" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" />
+</a>
+
+<br />
+<br />
+
 `ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs.
 
 ## Installation
