@@ -34,6 +34,7 @@ brews:
     tap:
       owner: mfuentesg
       name: homebrew-tap
+      branch: master
 
     commit_author:
       name: mfuentesg
