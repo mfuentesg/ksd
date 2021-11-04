@@ -28,43 +28,23 @@ changelog:
       - '^test:'
 brews:
   -
-    # Name template of the recipe
-    # Default to project name
     name: ksd
-
-    # GOARM to specify which 32-bit arm version to use if there are multiple versions
-    # from the build section. Brew formulas support atm only one 32-bit version.
-    # Default is 6 for all artifacts or each id if there a multiple versions.
     goarm: 6
 
-
-    # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
-    # same kind. We will probably unify this in the next major version like it is done with scoop.
-
-    # Github repository to push the tap to.
-    github:
+    tap:
       owner: mfuentesg
       name: homebrew-tap
+      branch: master
 
-    # Git author used to commit to the repository.
-    # Defaults are shown.
     commit_author:
       name: mfuentesg
       email: marceloe.fuentes@gmail.com
 
-    # Caveats for the user of your binary.
-    # Default is empty.
     caveats: "ksd < kubectl get secret <secret name> <secret file>.<yaml|json>"
 
-    # Your app's homepage.
-    # Default is empty.
     homepage: "https://github.com/mfuentesg/ksd"
 
-    # Your app's description.
-    # Default is empty.
     description: "ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs."
 
-    # So you can `brew test` your formula.
-    # Default is empty.
     test: |
       ksd version

@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      matrix:
+        go: [ 1.12, 1.13, 1.14, 1.15, 1.16, 1.17 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -14,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.x
+          go-version: ${{ matrix.go }}
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
