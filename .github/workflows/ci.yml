@@ -1,6 +1,6 @@
 name: ci
-
 on: release
+
 jobs:
   ci:
     runs-on: ubuntu-latest
