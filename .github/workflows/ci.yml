@@ -1,5 +1,8 @@
 name: ci
-on: release
+on:
+  push:
+    tags:
+      - '*'
 
 jobs:
   ci:
