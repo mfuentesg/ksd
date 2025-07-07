@@ -1,7 +1,6 @@
 # Kubernetes secret decoder a.k.a `ksd`
 
 
-![Travis](https://img.shields.io/travis/mfuentesg/ksd.svg)
 [![codecov](https://codecov.io/gh/mfuentesg/ksd/branch/main/graph/badge.svg)](https://codecov.io/gh/mfuentesg/ksd)
 
 <a href="https://www.buymeacoffee.com/mfuentesg" target="_blank">
