@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,11 +12,6 @@ import (
 
 type secret map[string]interface{}
 
-type decodedSecret struct {
-	Key   string
-	Value string
-}
-
 var version string
 
 func main() {
@@ -27,7 +21,8 @@ func main() {
 	}
 	info, err := os.Stdin.Stat()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
+		os.Exit(1)
 	}
 
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
@@ -58,7 +53,11 @@ func cast(data interface{}, isJSON bool) (map[string]interface{}, bool) {
 	}
 	d := make(map[string]interface{}, len(parsed))
 	for key, value := range parsed {
-		d[key.(string)] = value
+		strKey, ok := key.(string)
+		if !ok {
+			continue
+		}
+		d[strKey] = value
 	}
 	return d, true
 }
@@ -81,15 +80,7 @@ func parse(in []byte) ([]byte, error) {
 }
 
 func read(rd io.Reader) []byte {
-	var output []byte
-	reader := bufio.NewReader(rd)
-	for {
-		input, err := reader.ReadByte()
-		if err != nil && err == io.EOF {
-			break
-		}
-		output = append(output, input)
-	}
+	output, _ := io.ReadAll(rd)
 	return output
 }
 
@@ -107,27 +98,18 @@ func marshal(d interface{}, asJSON bool) ([]byte, error) {
 	return yaml.Marshal(d)
 }
 
-func decodeSecret(key, secret string, secrets chan decodedSecret) {
-	var value string
-	// avoid wrong encoded secrets
-	if decoded, err := base64.StdEncoding.DecodeString(secret); err == nil {
-		value = string(decoded)
-	} else {
-		value = secret
-	}
-	secrets <- decodedSecret{Key: key, Value: value}
-}
-
 func decode(data map[string]interface{}) map[string]string {
-	length := len(data)
-	secrets := make(chan decodedSecret, length)
-	decoded := make(map[string]string, length)
+	decoded := make(map[string]string, len(data))
 	for key, encoded := range data {
-		go decodeSecret(key, encoded.(string), secrets)
-	}
-	for i := 0; i < length; i++ {
-		secret := <-secrets
-		decoded[secret.Key] = secret.Value
+		strVal, ok := encoded.(string)
+		if !ok {
+			continue
+		}
+		if decodedVal, err := base64.StdEncoding.DecodeString(strVal); err == nil {
+			decoded[key] = string(decodedVal)
+		} else {
+			decoded[key] = strVal
+		}
 	}
 	return decoded
 }

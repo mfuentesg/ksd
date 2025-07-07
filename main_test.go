@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -89,7 +89,7 @@ func BenchmarkMarshal(b *testing.B) {
 
 func TestUnmarshalJSON(t *testing.T) {
 	var j map[string]interface{}
-	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	jsonCase, _ := os.ReadFile("./mock.json")
 	expected := map[string]interface{}{
 		"apiVersion": "v1",
 		"data": map[string]interface{}{
@@ -111,7 +111,7 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 
 func BenchmarkUnmarshalJSON(b *testing.B) {
-	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	jsonCase, _ := os.ReadFile("./mock.json")
 	var j map[string]interface{}
 	b.ReportAllocs()
 
@@ -122,7 +122,7 @@ func BenchmarkUnmarshalJSON(b *testing.B) {
 
 func TestUnmarshalYaml(t *testing.T) {
 	var y map[string]interface{}
-	yamlCase, _ := ioutil.ReadFile("./mock.yml")
+	yamlCase, _ := os.ReadFile("./mock.yml")
 	expected := map[string]interface{}{
 		"apiVersion": "v1",
 		"data": map[interface{}]interface{}{
@@ -144,7 +144,7 @@ func TestUnmarshalYaml(t *testing.T) {
 
 func BenchmarkUnmarshalYaml(b *testing.B) {
 	var y map[string]interface{}
-	yamlCase, _ := ioutil.ReadFile("./mock.yml")
+	yamlCase, _ := os.ReadFile("./mock.yml")
 	b.ReportAllocs()
 
 	for n := 0; n < b.N; n++ {
@@ -178,7 +178,7 @@ func BenchmarkSecret_Decode(b *testing.B) {
 }
 
 func TestIsJSONString(t *testing.T) {
-	yamlCase, _ := ioutil.ReadFile("./mock.yml")
+	yamlCase, _ := os.ReadFile("./mock.yml")
 	wrongTests := [...][]byte{
 		nil,
 		[]byte(""),
@@ -192,7 +192,7 @@ func TestIsJSONString(t *testing.T) {
 			t.Errorf("%v must not be a json string", string(test))
 		}
 	}
-	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	jsonCase, _ := os.ReadFile("./mock.json")
 	successCases := [...][]byte{
 		[]byte("null"),
 		[]byte(`{"valid":"json"}`),
@@ -205,7 +205,7 @@ func TestIsJSONString(t *testing.T) {
 }
 
 func BenchmarkIsJSONString(b *testing.B) {
-	jsonCase, _ := ioutil.ReadFile("./mock.json")
+	jsonCase, _ := os.ReadFile("./mock.json")
 	successCases := [...][]byte{
 		[]byte("null"),
 		[]byte(`{"valid":"json"}`),
