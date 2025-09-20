@@ -14,22 +14,38 @@
 
 ## Installation
 
-### Go
+### Krew (kubectl plugin)
 ```bash
-$ go get github.com/mfuentesg/ksd
+kubectl krew install ksd
 ```
 
-### Brew
-
-```
+### Homebrew (macOS/Linux)
+```bash
 brew install mfuentesg/tap/ksd
 ```
 
+### Go Install
+```bash
+go install github.com/mfuentesg/ksd@latest
+```
+
+### Download Binary
+Download the latest binary from the [releases page](https://github.com/mfuentesg/ksd/releases).
+
 ## Usage
 
+### As a kubectl plugin (after installing via Krew)
+```bash
+kubectl get secret <secret-name> -o yaml | kubectl ksd
+kubectl get secret <secret-name> -o json | kubectl ksd
 ```
-$ kubectl get secret <secret name> -o <yaml|json> | ksd
-$ ksd < kubectl get secret <secret name> <secret file>.<yaml|json>
+
+### As a standalone tool
+```bash
+kubectl get secret <secret-name> -o yaml | ksd
+kubectl get secret <secret-name> -o json | ksd
+ksd < secret.yaml
+ksd < secret.json
 ```
 
 ## Example

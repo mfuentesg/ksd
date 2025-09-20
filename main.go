@@ -7,38 +7,69 @@ import (
 	"io"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type secret map[string]interface{}
 
-var version string
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
 
 func main() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
-		_, _ = fmt.Fprintf(os.Stdout, "ksd version %s\n", version)
-		return
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "version", "-v", "--version":
+			fmt.Printf("ksd version %s\n", version)
+			if commit != "unknown" {
+				fmt.Printf("commit: %s\n", commit)
+			}
+			if date != "unknown" {
+				fmt.Printf("built: %s\n", date)
+			}
+			return
+		case "help", "-h", "--help":
+			printHelp()
+			return
+		}
 	}
+
 	info, err := os.Stdin.Stat()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
 		os.Exit(1)
 	}
 
 	if (info.Mode()&os.ModeCharDevice) != 0 || info.Size() < 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "the command is intended to work with pipes.")
-		_, _ = fmt.Fprintln(os.Stderr, "usage: kubectl get secret <secret-name> -o <yaml|json> |", os.Args[0])
-		_, _ = fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "< secret.<yaml|json>")
+		printHelp()
 		os.Exit(1)
 	}
 
 	stdin := read(os.Stdin)
 	output, err := parse(stdin)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
+		fmt.Fprintf(os.Stderr, "could not decode secret: %v\n", err)
 		os.Exit(1)
 	}
-	_, _ = fmt.Fprint(os.Stdout, string(output))
+	fmt.Print(string(output))
+}
+
+func printHelp() {
+	fmt.Fprintln(os.Stderr, "ksd - Kubernetes Secret Decoder")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "USAGE:")
+	fmt.Fprintln(os.Stderr, "  kubectl get secret <secret-name> -o <yaml|json> | ksd")
+	fmt.Fprintln(os.Stderr, "  ksd < secret.<yaml|json>")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "OPTIONS:")
+	fmt.Fprintln(os.Stderr, "  -h, --help     Show this help message")
+	fmt.Fprintln(os.Stderr, "  -v, --version  Show version information")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "EXAMPLES:")
+	fmt.Fprintln(os.Stderr, "  kubectl get secret mysecret -o json | ksd")
+	fmt.Fprintln(os.Stderr, "  kubectl get secret mysecret -o yaml | ksd")
 }
 
 func cast(data interface{}, isJSON bool) (map[string]interface{}, bool) {
@@ -103,8 +134,10 @@ func decode(data map[string]interface{}) map[string]string {
 	for key, encoded := range data {
 		strVal, ok := encoded.(string)
 		if !ok {
+			decoded[key] = fmt.Sprintf("%v", encoded)
 			continue
 		}
+		
 		if decodedVal, err := base64.StdEncoding.DecodeString(strVal); err == nil {
 			decoded[key] = string(decodedVal)
 		} else {

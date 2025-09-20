@@ -70,7 +70,7 @@ func TestMarshal(t *testing.T) {
 		},
 	}
 
-	expected = "data:\n  app: a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\n  password: c2VjcmV0\n"
+	expected = "data:\n    app: a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\n    password: c2VjcmV0\n"
 	byt, _ = marshal(testYml, false)
 	assert.Equal(t, expected, string(byt))
 }
@@ -125,12 +125,12 @@ func TestUnmarshalYaml(t *testing.T) {
 	yamlCase, _ := os.ReadFile("./mock.yml")
 	expected := map[string]interface{}{
 		"apiVersion": "v1",
-		"data": map[interface{}]interface{}{
+		"data": map[string]interface{}{
 			"password": "c2VjcmV0",
 			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
 		},
 		"kind": "Secret",
-		"metadata": map[interface{}]interface{}{
+		"metadata": map[string]interface{}{
 			"name":      "kubernetes secret decoder",
 			"namespace": "ksd",
 		},
@@ -161,6 +161,23 @@ func TestSecret_Decode(t *testing.T) {
 	expected := map[string]string{
 		"password": "secret",
 		"app":      "kubernetes secret decoder",
+	}
+	assert.Equal(t, expected, result)
+}
+
+func TestSecret_DecodeWithNonStringValues(t *testing.T) {
+	data := map[string]interface{}{
+		"password": "c2VjcmV0",
+		"number":   123,
+		"boolean":  true,
+		"invalid":  "not-base64!@#",
+	}
+	result := decode(data)
+	expected := map[string]string{
+		"password": "secret",
+		"number":   "123",
+		"boolean":  "true",
+		"invalid":  "not-base64!@#",
 	}
 	assert.Equal(t, expected, result)
 }

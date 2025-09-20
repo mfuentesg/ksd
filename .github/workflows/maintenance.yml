@@ -1,0 +1,106 @@
+---
+name: Maintenance
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Update Go modules
+        run: |
+          go get -u ./...
+          go mod tidy
+          go mod verify
+
+      - name: Run tests with updated dependencies
+        run: go test -v ./...
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet go.mod go.sum; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update Go dependencies'
+          title: 'chore: update Go dependencies'
+          body: |
+            ## 🔄 Automated Dependency Update
+
+            This PR updates Go dependencies to their latest versions.
+
+            ### Changes
+            - Updated Go modules to latest versions
+            - Ran `go mod tidy` to clean up dependencies
+            - Verified all tests pass with updated dependencies
+
+            ### Testing
+            - [x] All tests pass
+            - [x] Dependencies verified
+
+            This PR was created automatically by the maintenance workflow.
+          branch: chore/update-dependencies
+          delete-branch: true
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Run Go security audit
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Run Nancy vulnerability scanner
+        uses: sonatypecommunity/nancy-github-action@main
+        continue-on-error: true
+
+  cleanup-artifacts:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '30 days'
+          skip-recent: 5

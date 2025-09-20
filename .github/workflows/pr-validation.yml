@@ -1,0 +1,162 @@
+---
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  validate-pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.
+
+      - name: Check for breaking changes
+        id: breaking
+        run: |
+          if [[ "${{ github.event.pull_request.title }}" == *"!"* ]] ||
+             [[ "${{ github.event.pull_request.body }}" == *"BREAKING CHANGE"* ]]; then
+            echo "breaking=true" >> $GITHUB_OUTPUT
+          else
+            echo "breaking=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add breaking change label
+        if: steps.breaking.outputs.breaking == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['breaking-change']
+            })
+
+      - name: Check file changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - '**.md'
+              - 'docs/**'
+            code:
+              - '**.go'
+              - 'go.mod'
+              - 'go.sum'
+            ci:
+              - '.github/**'
+            config:
+              - '.goreleaser.yml'
+              - 'Makefile'
+
+      - name: Add appropriate labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [];
+
+            if ('${{ steps.changes.outputs.docs }}' === 'true') {
+              labels.push('documentation');
+            }
+
+            if ('${{ steps.changes.outputs.code }}' === 'true') {
+              labels.push('code');
+            }
+
+            if ('${{ steps.changes.outputs.ci }}' === 'true') {
+              labels.push('ci');
+            }
+
+            if ('${{ steps.changes.outputs.config }}' === 'true') {
+              labels.push('configuration');
+            }
+
+            if (labels.length > 0) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labels
+              });
+            }
+
+  size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const additions = pr.additions;
+            const deletions = pr.deletions;
+            const changes = additions + deletions;
+
+            let size = 'small';
+            let color = '0e8a16';
+
+            if (changes > 1000) {
+              size = 'extra-large';
+              color = 'd93f0b';
+            } else if (changes > 500) {
+              size = 'large';
+              color = 'fbca04';
+            } else if (changes > 100) {
+              size = 'medium';
+              color = 'ff9500';
+            }
+
+            // Add size label
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: [`size/${size}`]
+            });
+
+            // Add comment for large PRs
+            if (changes > 500) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `⚠️ **Large PR detected** (${changes} lines changed)\n\nConsider breaking this PR into smaller, more focused changes for easier review.`
+              });
+            }

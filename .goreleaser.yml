@@ -1,50 +1,142 @@
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
+# GoReleaser v2 configuration for ksd
+version: 2
+
 before:
   hooks:
-    # You may remove this if you don't use go modules.
+    - go mod tidy
     - go mod download
+
 builds:
-  - env:
+  - id: ksd
+    binary: ksd
+    env:
       - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm64
     ldflags:
-      - -s -w -X "main.version={{.Env.VERSION}}"
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arch }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ incpatch .Version }}-next"
+
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - '^docs:'
       - '^test:'
-brews:
-  -
-    name: ksd
-    goarm: 6
+      - '^ci:'
+      - '^chore:'
+      - '^style:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
 
-    tap:
+brews:
+  - name: ksd
+    repository:
       owner: mfuentesg
       name: homebrew-tap
       branch: main
-
     commit_author:
       name: mfuentesg
       email: marceloe.fuentes@gmail.com
-
-    caveats: "ksd < kubectl get secret <secret name> <secret file>.<yaml|json>"
-
     homepage: "https://github.com/mfuentesg/ksd"
-
-    description: "ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs."
-
+    description: "Kubernetes Secret Decoder - decode base64 encoded secrets in YAML or JSON format"
+    license: "MIT"
+    caveats: |
+      Usage:
+        kubectl get secret <secret-name> -o yaml | ksd
+        kubectl get secret <secret-name> -o json | ksd
+        ksd < secret.yaml
     test: |
-      ksd version
+      system "#{bin}/ksd", "version"
+
+krews:
+  - name: ksd
+    repository:
+      owner: mfuentesg
+      name: krew-index
+      branch: main
+    commit_author:
+      name: mfuentesg
+      email: marceloe.fuentes@gmail.com
+    homepage: "https://github.com/mfuentesg/ksd"
+    short_description: "Decode base64 encoded Kubernetes secrets"
+    description: |
+      ksd (Kubernetes Secret Decoder) is a command-line tool that decodes base64 encoded 
+      Kubernetes secrets and displays them in a human-readable format.
+      
+      Features:
+      - Supports both YAML and JSON input formats
+      - Automatically detects input format
+      - Converts 'data' field to 'stringData' for easy reading
+      - Handles binary data gracefully
+      - Works as both standalone tool and kubectl plugin
+      
+      Perfect for debugging and inspecting Kubernetes secrets without manual base64 decoding.
+    caveats: |
+      Usage as kubectl plugin:
+        kubectl get secret <secret-name> -o yaml | kubectl ksd
+        kubectl get secret <secret-name> -o json | kubectl ksd
+        
+      Usage with files:
+        kubectl ksd < secret.yaml
+        kubectl ksd < secret.json
+        
+      The tool will preserve all original secret fields except 'data', which gets 
+      converted to 'stringData' with decoded values.
+
+release:
+  github:
+    owner: mfuentesg
+    name: ksd
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## ksd {{ .Tag }}
+    
+    Welcome to this new release of ksd!
+  footer: |
+    **Full Changelog**: https://github.com/mfuentesg/ksd/compare/{{ .PreviousTag }}...{{ .Tag }}
