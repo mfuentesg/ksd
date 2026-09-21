@@ -68,6 +68,12 @@ homebrew_casks:
   - name: ksd
     binaries:
       - ksd
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/ksd"]
+          end
     repository:
       owner: mfuentesg
       name: homebrew-tap
