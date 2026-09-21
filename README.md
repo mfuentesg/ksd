@@ -14,6 +14,11 @@
 
 ## Installation
 
+### Krew (kubectl plugin manager)
+```bash
+kubectl krew install ksd
+```
+
 ### Homebrew (macOS/Linux)
 ```bash
 brew install --cask mfuentesg/tap/ksd
@@ -32,6 +37,12 @@ Download the latest binary for your platform from the [releases page](https://gi
 ```
 $ kubectl get secret <secret name> -o <yaml|json> | ksd
 $ ksd < secret.<yaml|json>
+```
+
+Installed via Krew? Use `kubectl ksd` in place of `ksd`:
+
+```
+$ kubectl get secret <secret name> -o <yaml|json> | kubectl ksd
 ```
 
 ## Example
@@ -73,3 +84,7 @@ $ ksd < secret.json
     "type": "Opaque"
 }
 ```
+
+## See also
+
+- [kubectl-view-secret](https://github.com/elsesiy/kubectl-view-secret) — another kubectl plugin for viewing/decoding Kubernetes secrets, also available via Krew.

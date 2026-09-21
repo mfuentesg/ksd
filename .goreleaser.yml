@@ -90,6 +90,20 @@ homebrew_casks:
         kubectl get secret <secret-name> -o json | ksd
         ksd < secret.yaml
 
+krews:
+  - name: ksd
+    skip_upload: true
+    homepage: "https://github.com/mfuentesg/ksd"
+    short_description: "Decode base64-encoded Kubernetes secrets"
+    description: |
+      ksd (Kubernetes Secret Decoder) decodes the base64-encoded `data`
+      field of a Kubernetes Secret manifest into a human-readable
+      `stringData` field. Accepts YAML or JSON on stdin, auto-detected.
+    caveats: |
+      Usage:
+        kubectl get secret <secret-name> -o yaml | kubectl ksd
+        kubectl get secret <secret-name> -o json | kubectl ksd
+
 release:
   github:
     owner: mfuentesg
