@@ -1,0 +1,77 @@
+---
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title follows Conventional Commits
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+
+  label:
+    name: Label PR by changed files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Check file changes
+        id: changes
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            docs:
+              - '**.md'
+            code:
+              - '**.go'
+              - 'go.mod'
+              - 'go.sum'
+            ci:
+              - '.github/**'
+            config:
+              - '.goreleaser.yml'
+              - '.golangci.yml'
+
+      - name: Apply labels
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const labels = [];
+            if ('${{ steps.changes.outputs.docs }}' === 'true') labels.push('documentation');
+            if ('${{ steps.changes.outputs.code }}' === 'true') labels.push('code');
+            if ('${{ steps.changes.outputs.ci }}' === 'true') labels.push('ci');
+            if ('${{ steps.changes.outputs.config }}' === 'true') labels.push('configuration');
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels,
+              });
+            }

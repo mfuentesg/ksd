@@ -14,27 +14,29 @@
 
 ## Installation
 
-### Go
+### Homebrew (macOS/Linux)
 ```bash
-$ go get github.com/mfuentesg/ksd
+brew install --cask mfuentesg/tap/ksd
 ```
 
-### Brew
+### Go Install
+```bash
+go install github.com/mfuentesg/ksd@latest
+```
 
-```
-brew install mfuentesg/tap/ksd
-```
+### Download Binary
+Download the latest binary for your platform from the [releases page](https://github.com/mfuentesg/ksd/releases).
 
 ## Usage
 
 ```
 $ kubectl get secret <secret name> -o <yaml|json> | ksd
-$ ksd < kubectl get secret <secret name> <secret file>.<yaml|json>
+$ ksd < secret.<yaml|json>
 ```
 
 ## Example
 
-> kube_secret.json
+> secret.json
 ```json
 {
     "apiVersion": "v1",
@@ -52,21 +54,21 @@ $ ksd < kubectl get secret <secret name> <secret file>.<yaml|json>
 ```
 
 ```
-$ ksd < kube_secret.json
+$ ksd < secret.json
 ```
 
 > output
 ```json
 {
     "apiVersion": "v1",
-    "data": {
-        "password": "secret",
-        "app": "kubernetes secret decoder"
-    },
     "kind": "Secret",
     "metadata": {
         "name": "kubernetes secret decoder",
         "namespace": "ksd"
+    },
+    "stringData": {
+        "app": "kubernetes secret decoder",
+        "password": "secret"
     },
     "type": "Opaque"
 }

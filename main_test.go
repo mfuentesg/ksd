@@ -1,248 +1,118 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"os"
-	"strings"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
-func TestRead(t *testing.T) {
-	texts := [...]string{
-		"this is a plain text",
-		`{"this": "is", "a": "text",\n"with": "multiple", "line": "s"}`,
-		`version:"2"\ndata:\n\tplain: "yml"`,
-		"",
-		"text",
-		"\t",
-		"\n",
-		"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-		"0",
-		"0x00000",
+// binPath is built once in TestMain and exercised as a subprocess by every
+// test below, so these tests exercise the real stdin/stdout/exit-code
+// contract rather than calling unexported main.go internals directly.
+var binPath string
+
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "ksd-test")
+	if err != nil {
+		panic(err)
 	}
 
-	for _, text := range texts {
-		reader := strings.NewReader(text)
-		assert.Equal(t, text, string(read(reader)))
+	binPath = filepath.Join(dir, "ksd")
+	build := exec.Command("go", "build", "-o", binPath, ".")
+	if out, err := build.CombinedOutput(); err != nil {
+		panic("building ksd for tests: " + err.Error() + "\n" + string(out))
 	}
+
+	// os.Exit below skips deferred calls, so clean up explicitly first.
+	code := m.Run()
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Fprintf(os.Stderr, "cleanup: %v\n", err)
+	}
+	os.Exit(code)
 }
 
-func BenchmarkRead(b *testing.B) {
-	texts := [...]string{
-		"this is a plain text",
-		`{"this": "is", "a": "text",\n"with": "multiple", "line": "s"}`,
-		`version:"2"\ndata:\n\tplain: "yml"`,
-		"",
-		"text",
-		"\t",
-		"\n",
-		"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-		"0",
-		"0x00000",
+func run(t *testing.T, stdin []byte, args ...string) (stdout, stderr string, exitCode int) {
+	t.Helper()
+
+	cmd := exec.Command(binPath, args...)
+	if stdin != nil {
+		cmd.Stdin = bytes.NewReader(stdin)
 	}
-	for _, text := range texts {
-		reader := strings.NewReader(text)
-		for n := 0; n < b.N; n++ {
-			read(reader)
-		}
+
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+
+	err := cmd.Run()
+	exitCode = 0
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		exitCode = exitErr.ExitCode()
+	} else if err != nil {
+		t.Fatalf("running ksd: %v", err)
 	}
-	b.ReportAllocs()
+
+	return outBuf.String(), errBuf.String(), exitCode
 }
 
-func TestMarshal(t *testing.T) {
-	test := map[string]string{
-		"password": "c2VjcmV0",
-		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-	}
-	if byt, err := marshal(test, true); err != nil {
-		t.Errorf("wrong marshal: %v got %s ", err, string(byt))
-	}
+func TestVersion(t *testing.T) {
+	stdout, _, exitCode := run(t, nil, "version")
 
-	expected := "{\n    \"app\": \"a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\",\n    \"password\": \"c2VjcmV0\"\n}"
-	byt, _ := marshal(test, true)
-	assert.Equal(t, expected, string(byt))
-
-	testYml := map[string]interface{}{
-		"data": map[string]string{
-			"password": "c2VjcmV0",
-			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-		},
-	}
-
-	expected = "data:\n  app: a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==\n  password: c2VjcmV0\n"
-	byt, _ = marshal(testYml, false)
-	assert.Equal(t, expected, string(byt))
+	assert.Equal(t, 0, exitCode)
+	assert.Equal(t, "ksd version \n", stdout)
 }
 
-func BenchmarkMarshal(b *testing.B) {
-	test := map[string]string{
-		"password": "c2VjcmV0",
-		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-	}
-	b.ReportAllocs()
+func TestNoStdinPrintsUsage(t *testing.T) {
+	stdout, stderr, exitCode := run(t, nil)
 
-	for n := 0; n < b.N; n++ {
-		_, _ = marshal(test, true)
-	}
+	assert.Equal(t, 1, exitCode)
+	assert.Empty(t, stdout)
+	assert.Contains(t, stderr, "the command is intended to work with pipes.")
 }
 
-func TestUnmarshalJSON(t *testing.T) {
-	var j map[string]interface{}
-	jsonCase, _ := os.ReadFile("./mock.json")
-	expected := map[string]interface{}{
-		"apiVersion": "v1",
-		"data": map[string]interface{}{
-			"password": "c2VjcmV0",
-			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-		},
-		"kind": "Secret",
-		"metadata": map[string]interface{}{
-			"name":      "kubernetes secret decoder",
-			"namespace": "ksd",
-		},
-		"type": "Opaque",
-	}
+func TestDecodeJSON(t *testing.T) {
+	in, err := os.ReadFile("testdata/secret.json")
+	require.NoError(t, err)
 
-	err := unmarshal(jsonCase, &j, true)
-	assert.Nil(t, err)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, j)
-}
+	stdout, stderr, exitCode := run(t, in)
 
-func BenchmarkUnmarshalJSON(b *testing.B) {
-	jsonCase, _ := os.ReadFile("./mock.json")
-	var j map[string]interface{}
-	b.ReportAllocs()
+	require.Equal(t, 0, exitCode, "stderr: %s", stderr)
 
-	for n := 0; n < b.N; n++ {
-		_ = unmarshal(jsonCase, &j, true)
-	}
-}
-
-func TestUnmarshalYaml(t *testing.T) {
-	var y map[string]interface{}
-	yamlCase, _ := os.ReadFile("./mock.yml")
-	expected := map[string]interface{}{
-		"apiVersion": "v1",
-		"data": map[interface{}]interface{}{
-			"password": "c2VjcmV0",
-			"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-		},
-		"kind": "Secret",
-		"metadata": map[interface{}]interface{}{
-			"name":      "kubernetes secret decoder",
-			"namespace": "ksd",
-		},
-		"type": "Opaque",
-	}
-	err := unmarshal(yamlCase, &y, false)
-	assert.Nil(t, err)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, y)
-}
-
-func BenchmarkUnmarshalYaml(b *testing.B) {
-	var y map[string]interface{}
-	yamlCase, _ := os.ReadFile("./mock.yml")
-	b.ReportAllocs()
-
-	for n := 0; n < b.N; n++ {
-		_ = unmarshal(yamlCase, &y, false)
-	}
-}
-
-func TestSecret_Decode(t *testing.T) {
-	data := map[string]interface{}{
-		"password": "c2VjcmV0",
-		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-	}
-	result := decode(data)
-	expected := map[string]string{
+	var got map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &got))
+	assert.Equal(t, map[string]interface{}{
 		"password": "secret",
 		"app":      "kubernetes secret decoder",
-	}
-	assert.Equal(t, expected, result)
+	}, got["stringData"])
 }
 
-func BenchmarkSecret_Decode(b *testing.B) {
-	data := map[string]interface{}{
-		"password": "c2VjcmV0",
-		"app":      "a3ViZXJuZXRlcyBzZWNyZXQgZGVjb2Rlcg==",
-	}
+func TestDecodeYAML(t *testing.T) {
+	in, err := os.ReadFile("testdata/secret.yaml")
+	require.NoError(t, err)
 
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		decode(data)
-	}
+	stdout, stderr, exitCode := run(t, in)
+
+	require.Equal(t, 0, exitCode, "stderr: %s", stderr)
+
+	var got map[string]interface{}
+	require.NoError(t, yaml.Unmarshal([]byte(stdout), &got))
+	assert.NotContains(t, got, "data")
+	assert.Equal(t, map[string]interface{}{
+		"password": "secret",
+		"app":      "kubernetes secret decoder",
+	}, got["stringData"])
 }
 
-func TestIsJSONString(t *testing.T) {
-	yamlCase, _ := os.ReadFile("./mock.yml")
-	wrongTests := [...][]byte{
-		nil,
-		[]byte(""),
-		[]byte("k"),
-		[]byte("-"),
-		[]byte(`"test": "case"`),
-		yamlCase,
-	}
-	for _, test := range wrongTests {
-		if isJSONString(test) {
-			t.Errorf("%v must not be a json string", string(test))
-		}
-	}
-	jsonCase, _ := os.ReadFile("./mock.json")
-	successCases := [...][]byte{
-		[]byte("null"),
-		[]byte(`{"valid":"json"}`),
-		[]byte(`{"nested": {"json": "string"}}`),
-		jsonCase,
-	}
-	for _, test := range successCases {
-		assert.True(t, isJSONString(test))
-	}
-}
+func TestDecodeInvalidInput(t *testing.T) {
+	_, stderr, exitCode := run(t, []byte("{invalid"))
 
-func BenchmarkIsJSONString(b *testing.B) {
-	jsonCase, _ := os.ReadFile("./mock.json")
-	successCases := [...][]byte{
-		[]byte("null"),
-		[]byte(`{"valid":"json"}`),
-		[]byte(`{"nested": {"json": "string"}}`),
-		jsonCase,
-	}
-
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		for _, test := range successCases {
-			isJSONString(test)
-		}
-	}
-}
-
-func TestParse(t *testing.T) {
-	_, err := parse([]byte(`{"a"`))
-	assert.NotNil(t, err)
-	assert.Error(t, err)
-
-	// Return same string without data part
-	expected := `{"key": "value"}`
-	s, err := parse([]byte(`{"key": "value"}`))
-	assert.Nil(t, err)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, string(s))
-
-	_, err = parse([]byte(`{"data": {"password": "c2VjcmV0"}}`))
-	assert.Nil(t, err)
-	assert.NoError(t, err)
-}
-
-func BenchmarkParse(b *testing.B) {
-	reader := []byte(`{"data": {"password": "c2VjcmV0"}}`)
-	b.ReportAllocs()
-
-	for n := 0; n < b.N; n++ {
-		_, _ = parse(reader)
-	}
+	assert.Equal(t, 1, exitCode)
+	assert.Contains(t, stderr, "could not decode secret:")
 }
