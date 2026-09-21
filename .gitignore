@@ -1,5 +1,15 @@
-vendor
-.idea/
-release
-
+# Build artifacts
+/ksd
 dist/
+release/
+
+# Test/coverage artifacts
+coverage.out
+coverage.html
+
+# Dependencies
+vendor/
+
+# IDE
+.idea/
+.vscode/
