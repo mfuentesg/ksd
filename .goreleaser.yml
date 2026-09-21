@@ -1,50 +1,94 @@
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
+version: 2
+
 before:
   hooks:
-    # You may remove this if you don't use go modules.
+    - go mod tidy
     - go mod download
+
 builds:
-  - env:
+  - id: ksd
+    binary: ksd
+    main: .
+    env:
       - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
     ldflags:
-      - -s -w -X "main.version={{.Env.VERSION}}"
+      - -s -w
+      - -X main.version={{.Version}}
+    flags:
+      - -trimpath
+
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    formats: ["tar.gz"]
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
+    files:
+      - README.md
+      - LICENSE
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
+
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ incpatch .Version }}-next"
+
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-brews:
-  -
-    name: ksd
-    goarm: 6
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
 
-    tap:
+homebrew_casks:
+  - name: ksd
+    binaries:
+      - ksd
+    repository:
       owner: mfuentesg
       name: homebrew-tap
       branch: main
-
     commit_author:
       name: mfuentesg
       email: marceloe.fuentes@gmail.com
-
-    caveats: "ksd < kubectl get secret <secret name> <secret file>.<yaml|json>"
-
     homepage: "https://github.com/mfuentesg/ksd"
+    description: "Kubernetes Secret Decoder - decode base64-encoded secrets in YAML or JSON format"
+    caveats: |
+      Usage:
+        kubectl get secret <secret-name> -o yaml | ksd
+        kubectl get secret <secret-name> -o json | ksd
+        ksd < secret.yaml
 
-    description: "ksd` is a tool, whose aim is help you to visualize in text plain your kubernetes secrets, either `yaml` or `json` outputs."
-
-    test: |
-      ksd version
+release:
+  github:
+    owner: mfuentesg
+    name: ksd
+  draft: false
+  prerelease: auto
+  mode: replace
+  footer: |
+    **Full Changelog**: https://github.com/mfuentesg/ksd/compare/{{ .PreviousTag }}...{{ .Tag }}
