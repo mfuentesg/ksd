@@ -16,11 +16,15 @@ import (
 // Input without a `data` field is returned unchanged. Values that aren't
 // valid base64 are passed through as-is.
 func Decode(in []byte) ([]byte, error) {
-	isJSON := isJSONString(in)
+	isJSON := looksLikeJSON(in)
 
 	doc, err := unmarshal(in, isJSON)
 	if err != nil {
-		return nil, err
+		format := "YAML"
+		if isJSON {
+			format = "JSON"
+		}
+		return nil, fmt.Errorf("invalid %s: %w", format, err)
 	}
 
 	data, ok := stringMap(doc["data"])
@@ -90,6 +94,12 @@ func marshal(doc map[string]interface{}, isJSON bool) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func isJSONString(in []byte) bool {
-	return json.Unmarshal(in, &json.RawMessage{}) == nil
+// looksLikeJSON decides which parser to use by the input's leading
+// character rather than strict validity. A strict "is this valid JSON"
+// check would misroute malformed JSON (e.g. "{invalid") to the YAML parser,
+// producing a YAML-flavored error message for input the user clearly
+// intended as JSON.
+func looksLikeJSON(in []byte) bool {
+	trimmed := bytes.TrimSpace(in)
+	return len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[')
 }
