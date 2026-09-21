@@ -72,6 +72,7 @@ homebrew_casks:
       owner: mfuentesg
       name: homebrew-tap
       branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: mfuentesg
       email: marceloe.fuentes@gmail.com
